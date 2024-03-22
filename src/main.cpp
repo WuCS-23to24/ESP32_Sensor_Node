@@ -8,11 +8,16 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
+#include "UUID.h"
+
+#include <bootloader_random.h>
+#include <esp_random.h>
+
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
-#define SERVICE_UUID ""
-#define CHARACTERISTIC_UUID ""
+UUID uuid2;
+UUID uuid1;
 
 class MyCallbacks : public BLECharacteristicCallbacks
 {
@@ -35,7 +40,25 @@ class MyCallbacks : public BLECharacteristicCallbacks
 
 void setup()
 {
+    bootloader_random_enable();
+    uint32_t rand_val_1 = esp_random();
+    uint32_t rand_val_2 = esp_random();
+
+    uint32_t rand_val_3 = esp_random();
+    uint32_t rand_val_4 = esp_random();
+
+    uuid1.seed(rand_val_1, rand_val_2);
+    uuid1.generate();
+    auto *service_uuid = uuid1.toCharArray();
+
+    uuid2.seed(rand_val_3, rand_val_4);
+    uuid2.generate();
+    auto *characteristic_uuid = uuid2.toCharArray();
+
     Serial.begin(115200);
+
+    Serial.printf("SERVICE UUID - %s\n", service_uuid);
+    Serial.printf("SERVICE UUID - %s\n", characteristic_uuid);
 
     Serial.println("1- Download and install an BLE scanner app in your phone");
     Serial.println("2- Scan for BLE devices in the app");
@@ -46,10 +69,10 @@ void setup()
     BLEDevice::init("MyESP32");
     BLEServer *pServer = BLEDevice::createServer();
 
-    BLEService *pService = pServer->createService(SERVICE_UUID);
+    BLEService *pService = pServer->createService(service_uuid);
 
     BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-        CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+        characteristic_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
     pCharacteristic->setCallbacks(new MyCallbacks());
 
