@@ -59,6 +59,9 @@ template <typename _Sensor_Type, typename _UUID_Generator_Type> class Bluetooth
     _UUID_Generator_Type _uuid_gen_struct;
 
   public:
+    Bluetooth()
+    {
+    }
     Bluetooth(_UUID_Generator_Type uuid_gen_struct, _Sensor_Type sensor) : _uuid_gen_struct(uuid_gen_struct)
     {
         BLEDevice::init("TEMP-0");

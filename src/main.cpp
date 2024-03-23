@@ -5,12 +5,15 @@
 #include "auxiliary.h"
 #include "bluetooth.hpp"
 
+uuids UUID_generator;
+TMP102 sensor;
+Bluetooth<TMP102, uuids> bluetooth;
+
 void setup()
 {
     Wire.begin();
     Serial.begin(115200);
 
-    TMP102 sensor;
     if (!sensor.begin())
         Serial.println("Could not connect to TMP102, sensor may not be connected.");
     else
@@ -24,13 +27,12 @@ void setup()
         sensor.setLowTempF(50.0);
     }
 
-    uuids UUID_generator;
     UUID_generator.initialize_random_values();
     UUID_generator.generate_hashes();
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_service_uuid());
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_characteristic_uuid());
 
-    Bluetooth<TMP102, uuids> bluetooth = Bluetooth<TMP102, uuids>(UUID_generator, sensor);
+    bluetooth = Bluetooth<TMP102, uuids>(UUID_generator, sensor);
 }
 
 void loop()
