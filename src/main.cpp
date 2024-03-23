@@ -3,18 +3,17 @@
    https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleWrite.cpp Ported to Arduino
    ESP32 by Evandro Copercini
 */
-#define CONFIG_DISABLE_HAL_LOCKS true
 
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include <Wire.h>
+#include <bootloader_random.h>
+#include <esp_random.h>
 
 #include "SparkFunTMP102.h"
 #include "UUID.h"
-
-#include <bootloader_random.h>
-#include <esp_random.h>
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
@@ -51,9 +50,11 @@ class MyCallbacks : public BLECharacteristicCallbacks
 
 void setup()
 {
+	Wire.begin();
+
     Serial.begin(115200);
 
-    if (!sensor.begin(0x48, Wire))
+    if (!sensor.begin())
     {
         Serial.println("Could not connect to TMP102, sensor may not be connected.");
     }
