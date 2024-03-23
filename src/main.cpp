@@ -3,11 +3,14 @@
    https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleWrite.cpp Ported to Arduino
    ESP32 by Evandro Copercini
 */
+#define CONFIG_DISABLE_HAL_LOCKS true
+
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
+#include "SparkFunTMP102.h"
 #include "UUID.h"
 
 #include <bootloader_random.h>
@@ -18,6 +21,7 @@
 
 UUID uuid2;
 UUID uuid1;
+TMP102 sensor;
 
 class MyCallbacks : public BLECharacteristicCallbacks
 {
@@ -36,10 +40,34 @@ class MyCallbacks : public BLECharacteristicCallbacks
             Serial.println("*********");
         }
     }
+
+    void onRead(BLECharacteristic *pCharacteristic)
+    {
+        auto data = sensor.readTempF();
+        pCharacteristic->setValue(data);
+        Serial.printf("TEMP READ: %g\n", data);
+    }
 };
 
 void setup()
 {
+    Serial.begin(115200);
+
+    if (!sensor.begin(0x48, Wire))
+    {
+        Serial.println("Could not connect to TMP102, sensor may not be connected.");
+    }
+    else
+    {
+        sensor.setFault(0);
+        sensor.setAlertPolarity(1);
+        sensor.setAlertMode(0);
+        sensor.setConversionRate(3);
+        sensor.setExtendedMode(0);
+        sensor.setHighTempF(120.0);
+        sensor.setLowTempF(50.0);
+    }
+
     bootloader_random_enable();
     uint32_t rand_val_1 = esp_random();
     uint32_t rand_val_2 = esp_random();
@@ -55,27 +83,17 @@ void setup()
     uuid2.generate();
     auto *characteristic_uuid = uuid2.toCharArray();
 
-    Serial.begin(115200);
-
     Serial.printf("SERVICE UUID - %s\n", service_uuid);
     Serial.printf("SERVICE UUID - %s\n", characteristic_uuid);
 
-    Serial.println("1- Download and install an BLE scanner app in your phone");
-    Serial.println("2- Scan for BLE devices in the app");
-    Serial.println("3- Connect to MyESP32");
-    Serial.println("4- Go to CUSTOM CHARACTERISTIC in CUSTOM SERVICE and write something");
-    Serial.println("5- See the magic =)");
+    BLEDevice::init("TEMP-0");
 
-    BLEDevice::init("MyESP32");
     BLEServer *pServer = BLEDevice::createServer();
-
     BLEService *pService = pServer->createService(service_uuid);
-
     BLECharacteristic *pCharacteristic = pService->createCharacteristic(
         characteristic_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
     pCharacteristic->setCallbacks(new MyCallbacks());
-
     pCharacteristic->setValue("Hello World");
     pService->start();
 
