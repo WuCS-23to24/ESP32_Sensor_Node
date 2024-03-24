@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <esp_system.h>
 
-const int wdtTimeout = 5000; // time in ms to trigger the watchdog
+const int wdtTimeout = 1000; // time in ms to trigger the watchdog
 hw_timer_t *timer = NULL;
 
 void ARDUINO_ISR_ATTR check_gps_data()

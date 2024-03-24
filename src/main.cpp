@@ -14,6 +14,7 @@ SFE_UBLOX_GNSS myGNSS;
 
 volatile SemaphoreHandle_t gps_semaphore;
 volatile int32_t milliseconds_since_boot = 0;
+
 portMUX_TYPE gps_isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
 // Time-to-Fix times in milliseconds
@@ -24,8 +25,8 @@ portMUX_TYPE gps_isr_mux = portMUX_INITIALIZER_UNLOCKED;
 void ARDUINO_ISR_ATTR set_gps_semaphore()
 {
     taskENTER_CRITICAL_ISR(&gps_isr_mux);
-	if (milliseconds_since_boot > 23000)
-    milliseconds_since_boot += 5000;
+    // if (milliseconds_since_boot < UBLOX_M10_COLD_START)
+    milliseconds_since_boot += wdtTimeout;
     taskEXIT_CRITICAL_ISR(&gps_isr_mux);
 
     xSemaphoreGiveFromISR(gps_semaphore, NULL);
@@ -56,10 +57,10 @@ void setup()
     else
     {
         Serial.println("u-blox GNSS detected");
-        // myGNSS.setPacketCfgPayloadSize(UBX_NAV_SAT_MAX_LEN);
+        myGNSS.setPacketCfgPayloadSize(UBX_NAV_SAT_MAX_LEN);
 
         myGNSS.setI2COutput(COM_TYPE_UBX);
-        // myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
+        myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
         // myGNSS.setNavigationFrequency(1);
     }
 
@@ -78,7 +79,12 @@ void loop()
 {
     if (xSemaphoreTake(gps_semaphore, 0) == pdTRUE)
     {
-        if (myGNSS.getPVT() == true)
+        int32_t temp = 0;
+        taskENTER_CRITICAL(&gps_isr_mux);
+        temp = milliseconds_since_boot;
+        taskEXIT_CRITICAL(&gps_isr_mux);
+
+        if (myGNSS.getPVT() == true && temp > UBLOX_M10_COLD_START)
         {
             int32_t latitude = myGNSS.getLatitude();
             Serial.printf("Lat: %10g", (float)latitude * 1e-7);
