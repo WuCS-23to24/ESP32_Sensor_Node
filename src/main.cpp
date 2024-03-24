@@ -13,10 +13,21 @@ Bluetooth<TMP102, uuids> bluetooth;
 SFE_UBLOX_GNSS myGNSS;
 
 volatile SemaphoreHandle_t gps_semaphore;
+volatile int32_t milliseconds_since_boot = 0;
 portMUX_TYPE gps_isr_mux = portMUX_INITIALIZER_UNLOCKED;
+
+// Time-to-Fix times in milliseconds
+#define UBLOX_M10_COLD_START 23000
+#define UBLOX_M10_AIDED_START 1000
+#define UBLOX_M10_HOT_START 1000
 
 void ARDUINO_ISR_ATTR set_gps_semaphore()
 {
+    taskENTER_CRITICAL_ISR(&gps_isr_mux);
+	if (milliseconds_since_boot > 23000)
+    milliseconds_since_boot += 5000;
+    taskEXIT_CRITICAL_ISR(&gps_isr_mux);
+
     xSemaphoreGiveFromISR(gps_semaphore, NULL);
 }
 
@@ -76,7 +87,7 @@ void loop()
             Serial.printf(" Long: %10g degrees", (float)longitude * 1e-7);
 
             int32_t altitude = myGNSS.getAltitudeMSL();
-			Serial.printf(" Alt: %10g m", altitude / 1000.0f);
+            Serial.printf(" Alt: %10g m", altitude / 1000.0f);
 
             Serial.println();
         }
