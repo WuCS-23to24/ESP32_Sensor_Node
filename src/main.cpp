@@ -61,7 +61,6 @@ void setup()
 
         myGNSS.setI2COutput(COM_TYPE_UBX);
         myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
-        // myGNSS.setNavigationFrequency(1);
     }
 
     UUID_generator.initialize_random_values();

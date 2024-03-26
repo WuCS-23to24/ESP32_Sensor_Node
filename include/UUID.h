@@ -12,17 +12,16 @@
 #ifndef BD282200_53D1_42C6_9E9C_17055ECFEFD6
 #define BD282200_53D1_42C6_9E9C_17055ECFEFD6
 
-
 #include "Arduino.h"
 #include "Printable.h"
 
+#define UUID_LIB_VERSION (F("0.1.6"))
 
-#define UUID_LIB_VERSION              (F("0.1.6"))
-
-//  TODO an enum?
-const uint8_t UUID_MODE_VARIANT4 = 0;
-const uint8_t UUID_MODE_RANDOM   = 1;
-
+enum UUID_MODE
+{
+    VARIANT4,
+    RANDOM
+};
 
 /////////////////////////////////////////////////
 //
@@ -30,52 +29,35 @@ const uint8_t UUID_MODE_RANDOM   = 1;
 //
 class UUID : public Printable
 {
-public:
-  UUID();
+  public:
+    UUID();
 
-  //  at least one seed value is mandatory, two is better.
-  void     seed(uint32_t s1, uint32_t s2 = 0);
-  //  generate a new UUID
-  void     generate();
-  //  make a UUID string
-  char *   toCharArray();
+    //  at least one seed value is mandatory, two is better.
+    void seed(uint32_t s1, uint32_t s2 = 0);
+    //  generate a new UUID
+    void generate();
+    //  make a UUID string
+    char *toCharArray();
 
-  //  MODE
-  void     setVariant4Mode();
-  void     setRandomMode();
-  uint8_t  getMode();
+    //  MODE
+    void setVariant4Mode();
+    void setRandomMode();
+    uint8_t getMode();
 
-  //  Printable interface
-  size_t   printTo(Print& p) const;
+    //  Printable interface
+    size_t printTo(Print &p) const;
 
+  private:
+    //  Marsaglia 'constants' + function
+    uint32_t _m_w = 1;
+    uint32_t _m_z = 2;
+    uint32_t _random();
 
-  //  CASE
-  //  (experimental code, not tested yet)
-  //  lower case is default and according to spec.
-  //  upper case is an additional feature.
-  //  must it be done at generation or at toCharArray() ?
-  //                     fast       or    flex
-  //
-  //  void     setLowerCase();
-  //  void     setUpperCase();
-
-
-private:
-  //  Marsaglia 'constants' + function
-  uint32_t _m_w = 1;
-  uint32_t _m_z = 2;
-  uint32_t _random();
-
-  //  UUID in string format
-  char     _buffer[37];
-  uint8_t  _mode = UUID_MODE_VARIANT4;
-
-  // bool     _upperCase = false;
+    //  UUID in string format
+    char _buffer[37];
+    uint8_t _mode = UUID_MODE::VARIANT4;
 };
 
-
 //  -- END OF FILE --
-
-
 
 #endif /* BD282200_53D1_42C6_9E9C_17055ECFEFD6 */
