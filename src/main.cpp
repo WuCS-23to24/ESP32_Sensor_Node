@@ -9,27 +9,49 @@
 
 uuids UUID_generator;
 TMP102 sensor;
-Bluetooth<TMP102, uuids> bluetooth;
+Bluetooth<uuids> bluetooth;
 SFE_UBLOX_GNSS myGNSS;
 
+volatile bool gps_enabled = false;
+volatile bool tmp_enabled = false;
+
 volatile SemaphoreHandle_t gps_semaphore;
-volatile int32_t milliseconds_since_boot = 0;
+volatile SemaphoreHandle_t temp_semaphore;
+volatile SemaphoreHandle_t ble_send_semaphore;
 
-portMUX_TYPE gps_isr_mux = portMUX_INITIALIZER_UNLOCKED;
+volatile int8_t GPS_ISR = 0;
+volatile int8_t BLE_SEND_ISR = 0;
 
-// Time-to-Fix times in milliseconds
-#define UBLOX_M10_COLD_START 23000
-#define UBLOX_M10_AIDED_START 1000
-#define UBLOX_M10_HOT_START 1000
+portMUX_TYPE isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
-void ARDUINO_ISR_ATTR set_gps_semaphore()
+void ARDUINO_ISR_ATTR set_semaphore()
 {
-    taskENTER_CRITICAL_ISR(&gps_isr_mux);
-    // if (milliseconds_since_boot < UBLOX_M10_COLD_START)
-    milliseconds_since_boot += wdtTimeout;
-    taskEXIT_CRITICAL_ISR(&gps_isr_mux);
+    taskENTER_CRITICAL_ISR(&isr_mux);
+    if (tmp_enabled)
+        xSemaphoreGiveFromISR(temp_semaphore, NULL);
 
-    xSemaphoreGiveFromISR(gps_semaphore, NULL);
+    if (GPS_ISR == 2)
+    {
+        if (gps_enabled)
+            xSemaphoreGiveFromISR(gps_semaphore, NULL);
+        GPS_ISR = 0;
+    }
+    else
+    {
+        GPS_ISR++;
+    }
+
+    if (BLE_SEND_ISR == 4)
+    {
+        if (deviceConnected)
+            xSemaphoreGiveFromISR(ble_send_semaphore, NULL);
+        BLE_SEND_ISR = 0;
+    }
+    else
+    {
+        BLE_SEND_ISR++;
+    }
+    taskEXIT_CRITICAL_ISR(&isr_mux);
 }
 
 void setup()
@@ -41,6 +63,7 @@ void setup()
         Serial.println("Could not connect to TMP102, sensor may not be connected.");
     else
     {
+        tmp_enabled = true;
         sensor.setFault(0);
         sensor.setAlertPolarity(1);
         sensor.setAlertMode(0);
@@ -56,6 +79,7 @@ void setup()
     }
     else
     {
+        gps_enabled = true;
         Serial.println("u-blox GNSS detected");
         myGNSS.setPacketCfgPayloadSize(UBX_NAV_SAT_MAX_LEN);
 
@@ -68,33 +92,42 @@ void setup()
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_service_uuid());
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_characteristic_uuid());
 
-    bluetooth = Bluetooth<TMP102, uuids>(UUID_generator, sensor);
+    bluetooth = Bluetooth<uuids>(UUID_generator);
 
     gps_semaphore = xSemaphoreCreateBinary();
-    setup_timer(set_gps_semaphore);
+    temp_semaphore = xSemaphoreCreateBinary();
+    ble_send_semaphore = xSemaphoreCreateBinary();
+    setup_timer(set_semaphore);
 }
 
 void loop()
 {
     if (xSemaphoreTake(gps_semaphore, 0) == pdTRUE)
     {
-        int32_t temp = 0;
-        taskENTER_CRITICAL(&gps_isr_mux);
-        temp = milliseconds_since_boot;
-        taskEXIT_CRITICAL(&gps_isr_mux);
-
-        if (myGNSS.getPVT() == true && temp > UBLOX_M10_COLD_START)
+        if (myGNSS.getPVT() == true)
         {
-            int32_t latitude = myGNSS.getLatitude();
-            Serial.printf("Lat: %10g", (float)latitude * 1e-7);
+            auto data = bluetooth.callback_class->getData();
+            data.latitude = (float)(myGNSS.getLatitude()) * 1e-7;
+            data.longitude = (float)(myGNSS.getLongitude()) * 1e-7;
+            data.altitude = (myGNSS.getAltitudeMSL()) / 1000.0f;
+            bluetooth.callback_class->setData(data);
 
-            int32_t longitude = myGNSS.getLongitude();
-            Serial.printf(" Long: %10g degrees", (float)longitude * 1e-7);
-
-            int32_t altitude = myGNSS.getAltitudeMSL();
-            Serial.printf(" Alt: %10g m", altitude / 1000.0f);
-
+            Serial.printf("Lat: %10g", data.latitude);
+            Serial.printf(" Long: %10g degrees", data.longitude);
+            Serial.printf(" Alt: %10g m", data.altitude);
             Serial.println();
         }
+    }
+    if (xSemaphoreTake(temp_semaphore, 0) == pdTRUE)
+    {
+        auto data = bluetooth.callback_class->getData();
+        data.temp_data = sensor.readTempF();
+        bluetooth.callback_class->setData(data);
+
+        Serial.printf("TEMP: %10g\n", data.temp_data);
+    }
+    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE && deviceConnected)
+    {
+        bluetooth.sendData();
     }
 }

@@ -57,30 +57,4 @@ struct uuids
     }
 };
 
-template <typename _Sensor_Type> struct Sensor
-{
-  private:
-    _Sensor_Type _sensor;
-
-  public:
-    Sensor(_Sensor_Type sensor) : _sensor(sensor)
-    {
-        if constexpr (std::is_same<_Sensor_Type, TMP102>::value)
-        {
-            if (!sensor.begin())
-                Serial.println("Could not connect to TMP102, sensor may not be connected.");
-            else
-            {
-                sensor.setFault(0);
-                sensor.setAlertPolarity(1);
-                sensor.setAlertMode(0);
-                sensor.setConversionRate(3);
-                sensor.setExtendedMode(0);
-                sensor.setHighTempF(120.0);
-                sensor.setLowTempF(50.0);
-            }
-        }
-    }
-};
-
 #endif /* B6B5A080_A253_4EB5_8937_6294B99B5CC8 */

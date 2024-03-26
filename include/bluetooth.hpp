@@ -4,14 +4,31 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include <sstream>
 
-template <typename _Sensor_Type> class CharacteristicCallbacks : public BLECharacteristicCallbacks
+bool deviceConnected = false;
+typedef struct __attribute__((__packed__)) BluetoothTransmissionData
+{
+    float temp_data;
+    float latitude;
+    float longitude;
+    float altitude;
+} BluetoothTransmissionData_t;
+
+typedef union BluetoothTransmissionDataConverter_u {
+
+    BluetoothTransmissionData_t message;
+    uint8_t bytes[sizeof(BluetoothTransmissionData)];
+
+} BluetoothTransmissionDataConverter_t;
+
+class CharacteristicCallbacks : public BLECharacteristicCallbacks
 {
   private:
-    _Sensor_Type _sensor;
+    BluetoothTransmissionData _data;
 
   public:
-    CharacteristicCallbacks(_Sensor_Type sensor) : _sensor(sensor)
+    CharacteristicCallbacks()
     {
     }
 
@@ -33,9 +50,13 @@ template <typename _Sensor_Type> class CharacteristicCallbacks : public BLEChara
 
     void onRead(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
     {
-        float data_raw = _sensor.readTempF();
-        std::string data = std::to_string(data_raw);
-        pCharacteristic->setValue(data);
+        std::stringstream str_data("");
+        str_data << "TEMP: " << _data.temp_data << " LAT: " << _data.latitude << " LONG: " << _data.longitude
+                 << " ALT: " << _data.altitude;
+
+        Serial.println(str_data.str().c_str());
+
+        pCharacteristic->setValue(str_data.str());
     }
 
     void onNotify(BLECharacteristic *pCharacteristic)
@@ -47,9 +68,37 @@ template <typename _Sensor_Type> class CharacteristicCallbacks : public BLEChara
     {
         printf("STATUS\n");
     }
+
+    BluetoothTransmissionData getData()
+    {
+        return _data;
+    }
+
+    void setData(BluetoothTransmissionData data)
+    {
+        _data = data;
+    }
 };
 
-template <typename _Sensor_Type, typename _UUID_Generator_Type> class Bluetooth
+class ServerCallbacks : public BLEServerCallbacks
+{
+  public:
+    void onConnect(BLEServer *pServer)
+    {
+        deviceConnected = true;
+        Serial.printf("Connected....\n");
+        BLEDevice::stopAdvertising();
+    }
+
+    void onDisconnect(BLEServer *pServer)
+    {
+        deviceConnected = false;
+        Serial.printf("Disconnected....\n");
+        BLEDevice::startAdvertising();
+    }
+};
+
+template <typename _UUID_Generator_Type> class Bluetooth
 {
   private:
     BLEServer *pServer;
@@ -59,25 +108,43 @@ template <typename _Sensor_Type, typename _UUID_Generator_Type> class Bluetooth
     _UUID_Generator_Type _uuid_gen_struct;
 
   public:
+    CharacteristicCallbacks *callback_class;
+
     Bluetooth()
     {
     }
-    Bluetooth(_UUID_Generator_Type uuid_gen_struct, _Sensor_Type sensor) : _uuid_gen_struct(uuid_gen_struct)
+
+    Bluetooth(_UUID_Generator_Type uuid_gen_struct) : _uuid_gen_struct(uuid_gen_struct)
     {
+        callback_class = new CharacteristicCallbacks();
+
         BLEDevice::init("TEMP-0");
         pServer = BLEDevice::createServer();
         pService = pServer->createService(_uuid_gen_struct.get_service_uuid());
         pCharacteristic = pService->createCharacteristic(
             _uuid_gen_struct.get_characteristic_uuid(),
-            BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY |
-                BLECharacteristic::PROPERTY_INDICATE);
+            BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
 
-        pCharacteristic->setCallbacks(new CharacteristicCallbacks<_Sensor_Type>(sensor));
-        pCharacteristic->setValue("Temp Sensor Node");
+        pCharacteristic->setCallbacks(callback_class);
+        pCharacteristic->setValue("Sensor Node");
         pService->start();
 
         pAdvertising = pServer->getAdvertising();
+        pAdvertising->addServiceUUID(_uuid_gen_struct.get_service_uuid());
+        pAdvertising->setScanResponse(false);
+        pAdvertising->setMinPreferred(0x0);
         pAdvertising->start();
+    }
+
+    void sendData()
+    {
+        if (deviceConnected)
+        {
+            BluetoothTransmissionDataConverter_t converter;
+            converter.message = callback_class->getData();
+            pCharacteristic->setValue(converter.bytes, sizeof(BluetoothTransmissionData));
+            pCharacteristic->notify();
+        }
     }
 };
 
