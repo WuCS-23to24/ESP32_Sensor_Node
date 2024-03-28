@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/error.h>
+#include <mbedtls/rsa.h>
+
 #include "SparkFunTMP102.h"
 #include "SparkFun_u-blox_GNSS_v3.h"
 #include "auxiliary.h"
@@ -11,6 +15,32 @@ uuids UUID_generator;
 TMP102 sensor;
 Bluetooth<uuids> bluetooth;
 SFE_UBLOX_GNSS myGNSS;
+
+mbedtls_rsa_context rsa_context;
+
+int f_rng(void *p_rng, unsigned char *output, size_t output_len)
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    mbedtls_ctr_drbg_context *ctx = (mbedtls_ctr_drbg_context *)p_rng;
+
+#if defined(MBEDTLS_THREADING_C)
+    if ((ret = mbedtls_mutex_lock(&ctx->mutex)) != 0)
+    {
+        return ret;
+    }
+#endif
+
+    ret = mbedtls_ctr_drbg_random_with_add(ctx, output, output_len, NULL, 0);
+
+#if defined(MBEDTLS_THREADING_C)
+    if (mbedtls_mutex_unlock(&ctx->mutex) != 0)
+    {
+        return MBEDTLS_ERR_THREADING_MUTEX_ERROR;
+    }
+#endif
+
+    return ret;
+}
 
 volatile bool gps_enabled = false;
 volatile bool tmp_enabled = false;
@@ -59,6 +89,9 @@ void setup()
     Wire.begin();
     Serial.begin(115200);
 
+    // mbedtls_rsa_init(&rsa_context, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_NONE);
+    // mbedtls_rsa_gen_key(&rsa_context, f_rng, NULL, 256, 13);
+
     if (!sensor.begin())
         Serial.println("Could not connect to TMP102, sensor may not be connected.");
     else
@@ -97,7 +130,8 @@ void setup()
     gps_semaphore = xSemaphoreCreateBinary();
     temp_semaphore = xSemaphoreCreateBinary();
     ble_send_semaphore = xSemaphoreCreateBinary();
-    setup_timer(set_semaphore);
+
+    setup_timer(set_semaphore, 250, 80);
 }
 
 void loop()
