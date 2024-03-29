@@ -1,5 +1,5 @@
-#ifndef F04EB51A_DCC5_4C00_BF78_FFB264E40E8E
-#define F04EB51A_DCC5_4C00_BF78_FFB264E40E8E
+#ifndef D0D95129_501D_4BC6_A6EB_4C567C7C456E
+#define D0D95129_501D_4BC6_A6EB_4C567C7C456E
 
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
@@ -8,193 +8,135 @@
 #include "mbedtls/platform.h"
 #include "mbedtls/rsa.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
-#include <cmath>
-
-enum RSA_CODES
-{
-    PUB_KEY_IMPORT_SUCCESS = 1,
-    PUB_KEY_EXPORT_SUCCESS = 2,
-    DATA_ENCRYPTION_SUCCESS = 3,
-    DATA_DECRYPTION_SUCCESS = 4,
-    COULD_NOT_IMPORT_REMOTE_RSA_MODULUS_STRING = -1,
-    COULD_NOT_IMPORT_REMOTE_RSA_PUBLIC_EXPONENT_STRING = -2,
-    COULD_NOT_IMPORT_MPI_CONTEXTS_INTO_RSA_CONTEXT = -3,
-    COULD_NOT_EXPORT_RSA_KEY_INTO_MPI_CONTEXT = -4,
-    INPUT_BUFFER_IS_SMALLER_THAN_CTX_LENGTH = -5,
-    COULD_NOT_ENCRYPT_DATA = -6,
-    COULD_NOT_DECRYPT_DATA = -7
-};
+#include <Arduino.h>
 
 struct rsa_public_key
 {
-    char *rsa_modulus;
-    char *rsa_public_exponent;
+    static const uint8_t size_rsa_modulus = 128;
+    static const uint8_t size_rsa_public_exponent = 32;
 
-    int size_rsa_modulus;
-    int size_rsa_public_exponent;
+    uint8_t rsa_modulus[size_rsa_modulus];
+    uint8_t rsa_public_exponent[size_rsa_public_exponent];
 };
 
 class RSA
 {
   public:
-    RSA()
+    RSA(int *ret)
     {
-        int ret = 0;
-
         /*
          * Initialize all contexts
          */
         mbedtls_ctr_drbg_init(&ctr_drbg);
         mbedtls_rsa_init(&local_rsa, MBEDTLS_RSA_PKCS_V15, 0);
-        mbedtls_mpi_init(&rsa_modulus);
-        mbedtls_mpi_init(&rsa_public_exponent);
-        mbedtls_mpi_init(&remote_rsa_modulus);
-        mbedtls_mpi_init(&remote_rsa_public_exponent);
+        mbedtls_rsa_init(&remote_rsa, MBEDTLS_RSA_PKCS_V15, 0);
         mbedtls_entropy_init(&entropy);
 
         /*
          * Seed the CTR_DRBG context
          */
-        if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)pers,
-                                         pers_len)) != 0)
+        if ((*ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)pers,
+                                          pers_len)) != 0)
         {
-            constructor_return_value = ret;
-
-            mbedtls_mpi_free(&rsa_modulus);
-            mbedtls_mpi_free(&rsa_public_exponent);
-            mbedtls_mpi_free(&remote_rsa_modulus);
-            mbedtls_mpi_free(&remote_rsa_public_exponent);
             mbedtls_rsa_free(&local_rsa);
+            mbedtls_rsa_free(&remote_rsa);
             mbedtls_ctr_drbg_free(&ctr_drbg);
             mbedtls_entropy_free(&entropy);
+
+            return;
         }
 
         /*
          * Generating RSA key
          */
-        if ((ret = mbedtls_rsa_gen_key(&local_rsa, mbedtls_ctr_drbg_random, &ctr_drbg, key_size, exponent)) != 0)
+        if ((*ret = mbedtls_rsa_gen_key(&local_rsa, mbedtls_ctr_drbg_random, &ctr_drbg, key_size, exponent)) != 0)
         {
-            constructor_return_value = ret;
-
-            mbedtls_mpi_free(&rsa_modulus);
-            mbedtls_mpi_free(&rsa_public_exponent);
-            mbedtls_mpi_free(&remote_rsa_modulus);
-            mbedtls_mpi_free(&remote_rsa_public_exponent);
             mbedtls_rsa_free(&local_rsa);
+            mbedtls_rsa_free(&remote_rsa);
             mbedtls_ctr_drbg_free(&ctr_drbg);
             mbedtls_entropy_free(&entropy);
         }
     }
 
-    int import_remote_rsa_public_key(char *remote_rsa_modulus_str, char *remote_rsa_public_exponent_str,
-                                     int remote_rsa_modulus_len, int remote_rsa_public_exponent_len)
+    int import_remote_rsa_public_key(rsa_public_key *import_key)
     {
+        if (import_key == NULL)
+        {
+            return -1;
+        }
+
         int ret = 0;
 
-        if ((ret = mbedtls_mpi_read_string(&remote_rsa_modulus, default_radix, remote_rsa_modulus_str)) != 0)
+        if ((ret = mbedtls_rsa_import_raw(&remote_rsa, import_key->rsa_modulus, import_key->size_rsa_modulus, NULL, 0,
+                                          NULL, 0, NULL, 0, import_key->rsa_public_exponent,
+                                          import_key->size_rsa_public_exponent)) != 0)
         {
-            return COULD_NOT_IMPORT_REMOTE_RSA_MODULUS_STRING;
+            return ret;
         }
 
-        if ((ret = mbedtls_mpi_read_string(&remote_rsa_public_exponent, default_radix,
-                                           remote_rsa_public_exponent_str)) != 0)
+        if ((ret = mbedtls_rsa_complete(&remote_rsa)) != 0)
         {
-            return COULD_NOT_IMPORT_REMOTE_RSA_PUBLIC_EXPONENT_STRING;
+            return ret;
         }
 
-        if ((ret = mbedtls_rsa_import(&remote_rsa, &remote_rsa_modulus, NULL, NULL, NULL,
-                                      &remote_rsa_public_exponent)) != 1)
+        if ((ret = mbedtls_rsa_check_pubkey(&remote_rsa)) != 0)
         {
-            return COULD_NOT_IMPORT_MPI_CONTEXTS_INTO_RSA_CONTEXT;
+            return ret;
         }
 
-        return PUB_KEY_IMPORT_SUCCESS;
+        return 0;
     }
 
     int export_local_rsa_public_key(rsa_public_key *export_key)
     {
-        unsigned int written_bytes = 0;
-        int ret = 0;
-
-        malloc_mpi_output_buffer(&rsa_modulus, 16, &export_key->rsa_modulus, &export_key->size_rsa_modulus);
-        malloc_mpi_output_buffer(&rsa_public_exponent, 16, &export_key->rsa_public_exponent,
-                                 &export_key->size_rsa_public_exponent);
-
-        if ((ret = mbedtls_mpi_write_string(&rsa_modulus, 16, export_key->rsa_modulus, export_key->size_rsa_modulus,
-                                            &written_bytes)) != 0 ||
-            (ret = mbedtls_mpi_write_string(&rsa_public_exponent, 16, export_key->rsa_public_exponent,
-                                            export_key->size_rsa_public_exponent, &written_bytes)) != 0)
+        if (export_key == NULL)
         {
-            return COULD_NOT_EXPORT_RSA_KEY_INTO_MPI_CONTEXT;
+            return -1;
         }
 
-        return PUB_KEY_EXPORT_SUCCESS;
+        return mbedtls_rsa_export_raw(&local_rsa, export_key->rsa_modulus, export_key->size_rsa_modulus, NULL, 0, NULL,
+                                      0, NULL, 0, export_key->rsa_public_exponent,
+                                      export_key->size_rsa_public_exponent);
     }
 
-    /*
-     * output_data gets allocated inside of encrypt_data, any data allocated to output_data prior will become
-     * unreachable.
-     */
-    int encrypt_data(const char *input_data, size_t input_len, char **output_data, size_t *output_len)
+    int encrypt_data(const unsigned char input_data[128], unsigned char output_data[128])
     {
-        if (input_len != remote_rsa.len)
+        if (input_data == NULL || output_data == NULL)
         {
-            return INPUT_BUFFER_IS_SMALLER_THAN_CTX_LENGTH;
+            return -1;
         }
 
-        *(unsigned char **)output_data = (unsigned char *)malloc(remote_rsa.len * sizeof(unsigned char));
-
-        if (mbedtls_rsa_public(&remote_rsa, (unsigned char *)input_data, *(unsigned char **)output_data) != 0)
-        {
-            return COULD_NOT_ENCRYPT_DATA;
-        }
-
-        return DATA_ENCRYPTION_SUCCESS;
+        return mbedtls_rsa_public(&remote_rsa, input_data, output_data);
     }
 
-    /*
-     * output_data gets allocated inside of encrypt_data, any data allocated to output_data prior will become
-     * unreachable.
-     */
-    int decrypt_data(const char *input_data, size_t input_len, char **output_data, size_t *output_len)
+    int decrypt_data(const unsigned char input_data[128], unsigned char output_data[128])
     {
-        if (input_len != remote_rsa.len)
+        if (input_data == NULL || output_data == NULL)
         {
-            return INPUT_BUFFER_IS_SMALLER_THAN_CTX_LENGTH;
+            return -1;
         }
 
-        *(unsigned char **)output_data = (unsigned char *)malloc(remote_rsa.len * sizeof(unsigned char));
-
-        if (mbedtls_rsa_private(&local_rsa, mbedtls_ctr_drbg_random, &ctr_drbg, (unsigned char *)input_data,
-                                *(unsigned char **)output_data) != 0)
-        {
-            return COULD_NOT_DECRYPT_DATA;
-        }
-
-        return DATA_DECRYPTION_SUCCESS;
+        return mbedtls_rsa_private(&local_rsa, mbedtls_ctr_drbg_random, &ctr_drbg, input_data, output_data);
     }
 
   private:
-    int constructor_return_value = 0;
-
     const char *pers = "rsa_genkey";
     const int pers_len = 11;
     const int default_radix = 16;
-    const int key_size = 2048;
-    const int exponent = std::pow(2, 60) + 1;
+    const int key_size = 1024;
+    const int exponent = 65537;
 
     mbedtls_rsa_context local_rsa;
     mbedtls_rsa_context remote_rsa;
 
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_mpi rsa_modulus, rsa_public_exponent;
-    mbedtls_mpi remote_rsa_modulus, remote_rsa_public_exponent;
 
-    inline void malloc_mpi_output_buffer(mbedtls_mpi *X, int radix, char **buffer, int *len)
+    inline void malloc_mpi_output_buffer(mbedtls_mpi *X, int radix, unsigned char **buffer, int *len)
     {
         size_t n = mbedtls_mpi_bitlen(X);
 
@@ -209,9 +151,9 @@ class RSA
         n += 1;
         n += (n & 1);
 
-        *buffer = (char *)malloc(n * sizeof(char));
+        *buffer = (unsigned char *)malloc(n * sizeof(unsigned char));
         *len = n;
     }
 };
 
-#endif /* F04EB51A_DCC5_4C00_BF78_FFB264E40E8E */
+#endif /* D0D95129_501D_4BC6_A6EB_4C567C7C456E */
