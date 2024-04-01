@@ -73,7 +73,7 @@ void ARDUINO_ISR_ATTR set_semaphore()
 
     if (BLE_SEND_ISR == 4)
     {
-        if (deviceConnected)
+        if (clientConnected)
             xSemaphoreGiveFromISR(ble_send_semaphore, NULL);
         BLE_SEND_ISR = 0;
     }
@@ -123,7 +123,7 @@ void setup()
     UUID_generator.initialize_random_values();
     UUID_generator.generate_hashes();
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_service_uuid());
-    Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_characteristic_uuid());
+    Serial.printf("CHARACTERISTIC UUID - %s\n", UUID_generator.get_characteristic_uuid());
 
     bluetooth = Bluetooth<uuids>(UUID_generator);
 
@@ -160,7 +160,7 @@ void loop()
 
         Serial.printf("TEMP: %10g\n", data.temp_data);
     }
-    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE && deviceConnected)
+    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE && clientConnected)
     {
         bluetooth.sendData();
     }

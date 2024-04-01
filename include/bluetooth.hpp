@@ -6,7 +6,7 @@
 #include <BLEUtils.h>
 #include <sstream>
 
-bool deviceConnected = false;
+bool clientConnected = false;
 typedef struct __attribute__((__packed__)) BluetoothTransmissionData
 {
     float temp_data;
@@ -85,15 +85,15 @@ class ServerCallbacks : public BLEServerCallbacks
   public:
     void onConnect(BLEServer *pServer)
     {
-        deviceConnected = true;
-        Serial.printf("Connected....\n");
+        clientConnected = true;
+        Serial.printf("Connected to aggregator.\n");
         BLEDevice::stopAdvertising();
     }
 
     void onDisconnect(BLEServer *pServer)
     {
-        deviceConnected = false;
-        Serial.printf("Disconnected....\n");
+        clientConnected = false;
+        Serial.printf("Disconnected from aggregator.\n");
         BLEDevice::startAdvertising();
     }
 };
@@ -138,7 +138,7 @@ template <typename _UUID_Generator_Type> class Bluetooth
 
     void sendData()
     {
-        if (deviceConnected)
+        if (clientConnected)
         {
             BluetoothTransmissionDataConverter_t converter;
             converter.message = callback_class->getData();
