@@ -88,6 +88,7 @@ void setup()
 {
     Wire.begin();
     Serial.begin(115200);
+    pinMode(LED_BUILTIN, OUTPUT);
 
     // mbedtls_rsa_init(&rsa_context, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_NONE);
     // mbedtls_rsa_gen_key(&rsa_context, f_rng, NULL, 256, 13);
@@ -120,8 +121,8 @@ void setup()
         myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
     }
 
-    UUID_generator.initialize_random_values();
-    UUID_generator.generate_hashes();
+    //UUID_generator.initialize_random_values();
+    //UUID_generator.generate_hashes();
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_service_uuid());
     Serial.printf("CHARACTERISTIC UUID - %s\n", UUID_generator.get_characteristic_uuid());
 
