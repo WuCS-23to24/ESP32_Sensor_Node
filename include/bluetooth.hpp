@@ -146,6 +146,11 @@ template <typename _UUID_Generator_Type> class Bluetooth
             pCharacteristic->notify();
         }
     }
+
+    bool clientIsConnected()
+    {
+        return clientConnected;
+    }
 };
 
 #endif /* A3A894A8_7557_423C_AF30_DF2AD1257EE6 */

@@ -161,7 +161,7 @@ void loop()
 
         Serial.printf("TEMP: %10g\n", data.temp_data);
     }
-    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE && clientConnected)
+    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE && bluetooth.clientIsConnected())
     {
         bluetooth.sendData();
     }
