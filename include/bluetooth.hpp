@@ -120,6 +120,7 @@ template <typename _UUID_Generator_Type> class Bluetooth
 
         BLEDevice::init("S0");
         pServer = BLEDevice::createServer();
+        pServer->setCallbacks(new ServerCallbacks);
         pService = pServer->createService(_uuid_gen_struct.get_service_uuid());
         pCharacteristic = pService->createCharacteristic(
             _uuid_gen_struct.get_characteristic_uuid(),
