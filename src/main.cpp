@@ -9,6 +9,7 @@
 #include "SparkFun_u-blox_GNSS_v3.h"
 #include "auxiliary.h"
 #include "bluetooth.hpp"
+#include "body.hpp"
 #include "hardware_timer.hpp"
 
 uuids UUID_generator;
@@ -54,7 +55,6 @@ volatile int8_t BLE_SEND_ISR = 0;
 
 portMUX_TYPE isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
-void send_baw_data(BluetoothTransmissionData);
 
 void ARDUINO_ISR_ATTR set_semaphore()
 {
@@ -91,6 +91,7 @@ void setup()
     Wire.begin();
     Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(A0, OUTPUT);
 
     // mbedtls_rsa_init(&rsa_context, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_NONE);
     // mbedtls_rsa_gen_key(&rsa_context, f_rng, NULL, 256, 13);
@@ -139,7 +140,7 @@ void setup()
 
 void loop()
 {
-    if (xSemaphoreTake(gps_semaphore, 0) == pdTRUE)
+    /*if (xSemaphoreTake(gps_semaphore, 0) == pdTRUE)
     {
         if (myGNSS.getPVT() == true)
         {
@@ -154,7 +155,7 @@ void loop()
             Serial.printf(" Alt: %10g m", data.altitude);
             Serial.println();
         }
-    }
+    }*/
     if (xSemaphoreTake(temp_semaphore, 0) == pdTRUE)
     {
         auto data = bluetooth.callback_class->getData();
@@ -174,7 +175,10 @@ void loop()
         {
             // send with alternative method
             printf("Sending over body channel...\n");
-            send_baw_data(bluetooth.callback_class->getData());
+            // ✨ u n i o n ✨
+            BluetoothTransmissionDataConverter_u data;
+            data.message = bluetooth.callback_class->getData();
+            send_baw_data(data.frame);
         }
     }
 }
