@@ -9,12 +9,14 @@
 #include "SparkFun_u-blox_GNSS_v3.h"
 #include "auxiliary.h"
 #include "bluetooth.hpp"
+#include "bodyaswire.hpp"
 #include "hardware_timer.hpp"
 
 uuids UUID_generator;
 TMP102 sensor;
 Bluetooth<uuids> bluetooth;
 SFE_UBLOX_GNSS myGNSS;
+BodyAsWire bodyaswire;
 
 mbedtls_rsa_context rsa_context;
 
@@ -47,14 +49,16 @@ volatile bool tmp_enabled = false;
 
 volatile SemaphoreHandle_t gps_semaphore;
 volatile SemaphoreHandle_t temp_semaphore;
-volatile SemaphoreHandle_t send_semaphore;
+volatile SemaphoreHandle_t ble_send_semaphore;
+volatile SemaphoreHandle_t baw_send_semaphore;
+
 
 volatile int8_t GPS_ISR = 0;
 volatile int8_t BLE_SEND_ISR = 0;
 
 portMUX_TYPE isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
-void send_baw_data(BluetoothTransmissionData);
+//void send_baw_data(BluetoothTransmissionData);
 
 void ARDUINO_ISR_ATTR set_semaphore()
 {
@@ -76,7 +80,9 @@ void ARDUINO_ISR_ATTR set_semaphore()
     if (BLE_SEND_ISR == 4)
     {
         if (clientConnected)
-            xSemaphoreGiveFromISR(send_semaphore, NULL);
+            xSemaphoreGiveFromISR(ble_send_semaphore, NULL);
+        else
+            xSemaphoreGiveFromISR(baw_send_semaphore, NULL);
         BLE_SEND_ISR = 0;
     }
     else
@@ -132,7 +138,8 @@ void setup()
 
     gps_semaphore = xSemaphoreCreateBinary();
     temp_semaphore = xSemaphoreCreateBinary();
-    send_semaphore = xSemaphoreCreateBinary();
+    ble_send_semaphore = xSemaphoreCreateBinary();
+    baw_send_semaphore = xSemaphoreCreateBinary();
 
     setup_timer(set_semaphore, 250, 80);
 }
@@ -161,20 +168,25 @@ void loop()
         data.temp_data = sensor.readTempF();
         bluetooth.callback_class->setData(data);
 
-        Serial.printf("TEMP: %10g\n", data.temp_data);
+        // Serial.printf("TEMP: %10g\n", data.temp_data);
     }
-    if (xSemaphoreTake(send_semaphore, 0) == pdTRUE)
+    if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE)
     {
+        printf("SSS\n");
         if (bluetooth.clientIsConnected())
         {
             printf("Sending over BLE...\n");
             bluetooth.sendData();
         }
-        else
-        {
-            // send with alternative method
-            printf("Sending over body channel...\n");
-            send_baw_data(bluetooth.callback_class->getData());
-        }
+    }
+    else if (xSemaphoreTake(baw_send_semaphore, 0) == pdTRUE)
+    {
+        // send with alternative method
+        printf("Sending over body channel...\n");
+        bodyaswire.setData(bluetooth.callback_class->getData());
+        bodyaswire.transmitFrame();
+
+        //send_baw_data(bluetooth.callback_class->getData());
     }
 }
+

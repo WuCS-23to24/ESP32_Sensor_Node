@@ -5,27 +5,21 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <sstream>
+#include "data_packet.h"
 
 bool clientConnected = false;
-typedef struct __attribute__((__packed__)) BluetoothTransmissionData
-{
-    float temp_data;
-    float latitude;
-    float longitude;
-    float altitude;
-} BluetoothTransmissionData_t;
 
-typedef union BluetoothTransmissionDataConverter_u {
+typedef union TransmissionDataConverter_u {
 
-    BluetoothTransmissionData_t message;
-    uint8_t bytes[sizeof(BluetoothTransmissionData)];
+    TransmissionData_t message;
+    uint8_t bytes[sizeof(TransmissionData)];
 
-} BluetoothTransmissionDataConverter_t;
+} TransmissionDataConverter_t;
 
 class CharacteristicCallbacks : public BLECharacteristicCallbacks
 {
   private:
-    BluetoothTransmissionData _data;
+    TransmissionData _data;
 
   public:
     CharacteristicCallbacks()
@@ -69,12 +63,12 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks
         printf("STATUS\n");
     }
 
-    BluetoothTransmissionData getData()
+    TransmissionData getData()
     {
         return _data;
     }
 
-    void setData(BluetoothTransmissionData data)
+    void setData(TransmissionData data)
     {
         _data = data;
     }
@@ -141,9 +135,9 @@ template <typename _UUID_Generator_Type> class Bluetooth
     {
         if (clientConnected)
         {
-            BluetoothTransmissionDataConverter_t converter;
+            TransmissionDataConverter_t converter;
             converter.message = callback_class->getData();
-            pCharacteristic->setValue(converter.bytes, sizeof(BluetoothTransmissionData));
+            pCharacteristic->setValue(converter.bytes, sizeof(TransmissionData));
             pCharacteristic->notify();
         }
     }
