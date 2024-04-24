@@ -137,7 +137,12 @@ template <typename _UUID_Generator_Type> class Bluetooth
         {
             TransmissionDataConverter_t converter;
             converter.message = callback_class->getData();
-            pCharacteristic->setValue(converter.bytes, sizeof(TransmissionData));
+            auto temp = new float;
+            *temp= callback_class->getData().temp_data;
+            pCharacteristic->setValue((uint8_t *)temp, 4);
+            //pCharacteristic->setValue(converter.bytes, sizeof(TransmissionData));
+            //pCharacteristic->setValue(*(uint32_t *)&(callback_class->getData().temp_data));
+
             pCharacteristic->notify();
         }
     }

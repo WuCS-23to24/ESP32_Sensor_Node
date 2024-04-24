@@ -65,7 +65,8 @@ class BodyAsWire
         void transmitFrame()
         {
             transmitStartRZ();
-            transmitFloatRZ(_data.temp_data);
+            //transmitFloatRZ(_data.temp_data);
+            transmitFloatRZ(70.93);
             //transmitFloatRZ(_data.latitude);
             //transmitFloatRZ(_data.longitude);
             //transmitFloatRZ(_data.altitude);

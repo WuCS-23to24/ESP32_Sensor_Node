@@ -58,6 +58,7 @@ volatile int8_t BLE_SEND_ISR = 0;
 
 portMUX_TYPE isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
+unsigned int counter = 0;
 //void send_baw_data(BluetoothTransmissionData);
 
 void ARDUINO_ISR_ATTR set_semaphore()
@@ -172,10 +173,12 @@ void loop()
     }
     if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE)
     {
-        printf("SSS\n");
         if (bluetooth.clientIsConnected())
         {
             printf("Sending over BLE...\n");
+            TransmissionData temp;
+            temp.temp_data = 70.93;
+            bluetooth.callback_class->setData(temp);
             bluetooth.sendData();
         }
     }
