@@ -7,15 +7,9 @@
 #include <sstream>
 #include "data_packet.h"
 
-bool clientConnected = false;
+bool clientConnected = false; // indicates whether aggregator is connected
 
-typedef union TransmissionDataConverter_u {
-
-    TransmissionData_t message;
-    uint8_t bytes[sizeof(TransmissionData)];
-
-} TransmissionDataConverter_t;
-
+// Callbacks for server's main characteristic between sensor and aggregator 
 class CharacteristicCallbacks : public BLECharacteristicCallbacks
 {
   private:
@@ -74,6 +68,7 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks
     }
 };
 
+// Callbacks for overall server between sensor and aggregator 
 class ServerCallbacks : public BLEServerCallbacks
 {
   public:
@@ -92,6 +87,7 @@ class ServerCallbacks : public BLEServerCallbacks
     }
 };
 
+// main class for handling BLE 
 template <typename _UUID_Generator_Type> class Bluetooth
 {
   private:
@@ -112,6 +108,7 @@ template <typename _UUID_Generator_Type> class Bluetooth
     {
         callback_class = new CharacteristicCallbacks();
 
+        // Initialize BLE server
         BLEDevice::init("S0");
         pServer = BLEDevice::createServer();
         pServer->setCallbacks(new ServerCallbacks);
@@ -131,6 +128,7 @@ template <typename _UUID_Generator_Type> class Bluetooth
         pAdvertising->start();
     }
 
+    // Send a message using notify to the aggregator 
     void sendData()
     {
         if (clientConnected)

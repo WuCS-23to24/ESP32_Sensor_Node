@@ -7,6 +7,7 @@
 const int F_CARRIER = 10000;
 const int SYMBOL_HALF_MS = 5;
 
+// class for handling body as wire transmission
 class BodyAsWire
 {
     private:
@@ -66,14 +67,8 @@ class BodyAsWire
         {
             transmitStartRZ();
             transmitFloatRZ(_data.temp_data);
-            //transmitFloatRZ(_data.latitude);
-            //transmitFloatRZ(_data.longitude);
-            //transmitFloatRZ(_data.altitude);
             transmitStopRZ();
         }
-
 };
-
-
 
 #endif

@@ -58,8 +58,7 @@ volatile int8_t BLE_SEND_ISR = 0;
 
 portMUX_TYPE isr_mux = portMUX_INITIALIZER_UNLOCKED;
 
-//void send_baw_data(BluetoothTransmissionData);
-
+// ISR for handling various semaphores
 void ARDUINO_ISR_ATTR set_semaphore()
 {
     taskENTER_CRITICAL_ISR(&isr_mux);
@@ -129,8 +128,6 @@ void setup()
         myGNSS.saveConfigSelective(VAL_CFG_SUBSEC_IOPORT);
     }
 
-    //UUID_generator.initialize_random_values();
-    //UUID_generator.generate_hashes();
     Serial.printf("SERVICE UUID - %s\n", UUID_generator.get_service_uuid());
     Serial.printf("CHARACTERISTIC UUID - %s\n", UUID_generator.get_characteristic_uuid());
 
@@ -141,7 +138,7 @@ void setup()
     ble_send_semaphore = xSemaphoreCreateBinary();
     baw_send_semaphore = xSemaphoreCreateBinary();
 
-    setup_timer(set_semaphore, 250, 80);
+    setup_timer(set_semaphore, 250, 80); // prepare interrupt timer to control semaphores
 }
 
 void loop()
@@ -167,11 +164,10 @@ void loop()
         auto data = bluetooth.callback_class->getData();
         data.temp_data = sensor.readTempF();
         bluetooth.callback_class->setData(data);
-
-        // Serial.printf("TEMP: %10g\n", data.temp_data);
     }
     if (xSemaphoreTake(ble_send_semaphore, 0) == pdTRUE)
     {
+        // Priority: BLE transmit
         printf("SSS\n");
         if (bluetooth.clientIsConnected())
         {
@@ -181,12 +177,9 @@ void loop()
     }
     else if (xSemaphoreTake(baw_send_semaphore, 0) == pdTRUE)
     {
-        // send with alternative method
+        // Alternative: Acoustic transmit
         printf("Sending over body channel...\n");
         bodyaswire.setData(bluetooth.callback_class->getData());
         bodyaswire.transmitFrame();
-
-        //send_baw_data(bluetooth.callback_class->getData());
     }
 }
-

@@ -9,4 +9,10 @@ typedef struct __attribute__((__packed__)) TransmissionData
     float altitude;
 } TransmissionData_t;
 
+typedef union TransmissionDataConverter_u {
+
+    TransmissionData_t message;
+    uint8_t bytes[sizeof(TransmissionData)];
+
+} TransmissionDataConverter_t;
 #endif
