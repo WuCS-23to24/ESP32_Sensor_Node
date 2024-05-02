@@ -52,7 +52,6 @@ volatile SemaphoreHandle_t temp_semaphore;
 volatile SemaphoreHandle_t ble_send_semaphore;
 volatile SemaphoreHandle_t baw_send_semaphore;
 
-
 volatile int8_t GPS_ISR = 0;
 volatile int8_t BLE_SEND_ISR = 0;
 

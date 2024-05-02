@@ -1,15 +1,15 @@
 #ifndef A3A894A8_7557_423C_AF30_DF2AD1257EE6
 #define A3A894A8_7557_423C_AF30_DF2AD1257EE6
 
+#include "data_packet.h"
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <sstream>
-#include "data_packet.h"
 
 bool clientConnected = false; // indicates whether aggregator is connected
 
-// Callbacks for server's main characteristic between sensor and aggregator 
+// Callbacks for server's main characteristic between sensor and aggregator
 class CharacteristicCallbacks : public BLECharacteristicCallbacks
 {
   private:
@@ -68,7 +68,7 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks
     }
 };
 
-// Callbacks for overall server between sensor and aggregator 
+// Callbacks for overall server between sensor and aggregator
 class ServerCallbacks : public BLEServerCallbacks
 {
   public:
@@ -87,7 +87,7 @@ class ServerCallbacks : public BLEServerCallbacks
     }
 };
 
-// main class for handling BLE 
+// main class for handling BLE
 template <typename _UUID_Generator_Type> class Bluetooth
 {
   private:
@@ -128,7 +128,7 @@ template <typename _UUID_Generator_Type> class Bluetooth
         pAdvertising->start();
     }
 
-    // Send a message using notify to the aggregator 
+    // Send a message using notify to the aggregator
     void sendData()
     {
         if (clientConnected)

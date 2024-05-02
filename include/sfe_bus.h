@@ -1,5 +1,6 @@
 /*
-  An Arduino Library which allows you to communicate seamlessly with u-blox GNSS modules using the Configuration Interface
+  An Arduino Library which allows you to communicate seamlessly with u-blox GNSS modules using the Configuration
+  Interface
 
   SparkFun sells these at its website: www.sparkfun.com
   Do you like this library? Help support SparkFun. Buy a board!
@@ -53,15 +54,15 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Wire.h>
 #include <SPI.h>
+#include <Wire.h>
 
 namespace SparkFun_UBLOX_GNSS
 {
 
-  // The following abstract class is used an interface for upstream implementation.
-  class GNSSDeviceBus
-  {
+// The following abstract class is used an interface for upstream implementation.
+class GNSSDeviceBus
+{
   public:
     // For I2C, ping the _address
     // Not Applicable for SPI and Serial
@@ -88,12 +89,12 @@ namespace SparkFun_UBLOX_GNSS
     // For I2C, read from register 0xFF
     // For SPI, read the byte while writing 0xFF
     virtual uint8_t readBytes(uint8_t *data, uint8_t length) = 0;
-  };
+};
 
-  // The SfeI2C device defines behavior for I2C implementation based around the TwoWire class (Wire).
-  // This is Arduino specific.
-  class SfeI2C : public GNSSDeviceBus
-  {
+// The SfeI2C device defines behavior for I2C implementation based around the TwoWire class (Wire).
+// This is Arduino specific.
+class SfeI2C : public GNSSDeviceBus
+{
   public:
     SfeI2C(void);
 
@@ -108,25 +109,38 @@ namespace SparkFun_UBLOX_GNSS
     uint8_t writeBytes(uint8_t *data, uint8_t length);
 
     uint8_t writeReadBytes(const uint8_t *data, uint8_t *readData, uint8_t length)
-    { (void)data; (void)readData; (void)length; return 0; }
+    {
+        (void)data;
+        (void)readData;
+        (void)length;
+        return 0;
+    }
 
-    void startWriteReadByte(){};
-    void writeReadByte(const uint8_t *data, uint8_t *readData){ (void)data; (void)readData; }
-    void writeReadByte(const uint8_t data, uint8_t *readData){ (void)data; (void)readData; }
-    void endWriteReadByte(){};
+    void startWriteReadByte() {};
+    void writeReadByte(const uint8_t *data, uint8_t *readData)
+    {
+        (void)data;
+        (void)readData;
+    }
+    void writeReadByte(const uint8_t data, uint8_t *readData)
+    {
+        (void)data;
+        (void)readData;
+    }
+    void endWriteReadByte() {};
 
     uint8_t readBytes(uint8_t *data, uint8_t length);
 
   private:
     TwoWire *_i2cPort;
     uint8_t _address;
-  };
+};
 
-  // The SfeSPI class defines behavior for SPI implementation based around the SPIClass class (SPI).
-  // This is Arduino specific.
-  // Note that writeBytes also reads bytes (into data)
-  class SfeSPI : public GNSSDeviceBus
-  {
+// The SfeSPI class defines behavior for SPI implementation based around the SPIClass class (SPI).
+// This is Arduino specific.
+// Note that writeBytes also reads bytes (into data)
+class SfeSPI : public GNSSDeviceBus
+{
   public:
     SfeSPI(void);
 
@@ -136,7 +150,10 @@ namespace SparkFun_UBLOX_GNSS
 
     bool init(SPIClass &spiPort, uint32_t spiSpeed, uint8_t cs, bool bInit = false);
 
-    bool ping() { return false; }
+    bool ping()
+    {
+        return false;
+    }
 
     uint16_t available();
 
@@ -156,101 +173,129 @@ namespace SparkFun_UBLOX_GNSS
     // Settings are used for every transaction.
     SPISettings _sfeSPISettings;
     uint8_t _cs;
-  };
+};
 
-  // The sfeSerial device defines behavior for Serial (UART) implementation based around the Stream class.
-  // This is Arduino specific.
-  class SfeSerial : public GNSSDeviceBus
-  {
+// The sfeSerial device defines behavior for Serial (UART) implementation based around the Stream class.
+// This is Arduino specific.
+class SfeSerial : public GNSSDeviceBus
+{
   public:
     SfeSerial(void);
 
     bool init(Stream &serialPort);
 
-    bool ping() { return false; }
+    bool ping()
+    {
+        return false;
+    }
 
     uint16_t available();
 
     uint8_t writeBytes(uint8_t *data, uint8_t length);
 
     uint8_t writeReadBytes(const uint8_t *data, uint8_t *readData, uint8_t length)
-    { (void)data; (void)readData; (void)length; return 0; }
+    {
+        (void)data;
+        (void)readData;
+        (void)length;
+        return 0;
+    }
 
-    void startWriteReadByte(){};
-    void writeReadByte(const uint8_t *data, uint8_t *readData){ (void)data; (void)readData; }
-    void writeReadByte(const uint8_t data, uint8_t *readData){ (void)data; (void)readData; }
-    void endWriteReadByte(){};
+    void startWriteReadByte() {};
+    void writeReadByte(const uint8_t *data, uint8_t *readData)
+    {
+        (void)data;
+        (void)readData;
+    }
+    void writeReadByte(const uint8_t data, uint8_t *readData)
+    {
+        (void)data;
+        (void)readData;
+    }
+    void endWriteReadByte() {};
 
     uint8_t readBytes(uint8_t *data, uint8_t length);
 
   private:
     Stream *_serialPort;
-  };
+};
 
-  // The sfePrint device defines behavior for Serial diagnostic prints based around the Stream class.
-  // This is Arduino specific.
-  class SfePrint
-  {
+// The sfePrint device defines behavior for Serial diagnostic prints based around the Stream class.
+// This is Arduino specific.
+class SfePrint
+{
   public:
-    SfePrint(void) { _outputPort = nullptr; }
+    SfePrint(void)
+    {
+        _outputPort = nullptr;
+    }
 
-    void init(Print &outputPort) { _outputPort = &outputPort; }
-    inline bool operator==(SfePrint const &other) const { return _outputPort == other._outputPort; }
-    inline bool operator!=(SfePrint const &other) const { return !(*this == other); }
-    
+    void init(Print &outputPort)
+    {
+        _outputPort = &outputPort;
+    }
+    inline bool operator==(SfePrint const &other) const
+    {
+        return _outputPort == other._outputPort;
+    }
+    inline bool operator!=(SfePrint const &other) const
+    {
+        return !(*this == other);
+    }
+
     void write(uint8_t c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->write(c);
+        if (_outputPort != nullptr)
+            _outputPort->write(c);
     }
     void print(const char *c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->print(c);
+        if (_outputPort != nullptr)
+            _outputPort->print(c);
     }
     void print(const __FlashStringHelper *c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->print(c);
+        if (_outputPort != nullptr)
+            _outputPort->print(c);
     }
     void print(unsigned int c, int f)
     {
-      if (_outputPort != nullptr)
-        _outputPort->print(c, f);
+        if (_outputPort != nullptr)
+            _outputPort->print(c, f);
     }
     void print(uint16_t c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->print(c);
+        if (_outputPort != nullptr)
+            _outputPort->print(c);
     }
     void println()
     {
-      if (_outputPort != nullptr)
-        _outputPort->println();
+        if (_outputPort != nullptr)
+            _outputPort->println();
     }
     void println(const char *c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->println(c);
+        if (_outputPort != nullptr)
+            _outputPort->println(c);
     }
     void println(const __FlashStringHelper *c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->println(c);
+        if (_outputPort != nullptr)
+            _outputPort->println(c);
     }
     void println(size_t c)
     {
-      if (_outputPort != nullptr)
-        _outputPort->println(c);
+        if (_outputPort != nullptr)
+            _outputPort->println(c);
     }
     void println(uint8_t c, int f)
     {
-      if (_outputPort != nullptr)
-        _outputPort->println(c, f);
+        if (_outputPort != nullptr)
+            _outputPort->println(c, f);
     }
-  
-  private: 
-    Print *_outputPort;
-  };
 
+  private:
+    Print *_outputPort;
 };
+
+}; // namespace SparkFun_UBLOX_GNSS
