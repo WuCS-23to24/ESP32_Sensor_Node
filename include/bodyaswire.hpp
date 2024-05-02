@@ -10,6 +10,24 @@ const int SYMBOL_HALF_MS = 5;
 // class for handling body as wire transmission
 class BodyAsWire
 {
+  public:
+    TransmissionData getData()
+    {
+        return _data;
+    }
+
+    void setData(TransmissionData data)
+    {
+        _data = data;
+    }
+
+    void transmitFrame()
+    {
+        transmitStartRZ();
+        transmitFloatRZ(_data.temp_data);
+        transmitStopRZ();
+    }
+
   private:
     int pin_A0{digitalPinToBitMask(A0)};
 
@@ -50,24 +68,6 @@ class BodyAsWire
         noTone(A0);
         dacWrite(pin_A0, 0);
         delay(SYMBOL_HALF_MS);
-    }
-
-  public:
-    TransmissionData getData()
-    {
-        return _data;
-    }
-
-    void setData(TransmissionData data)
-    {
-        _data = data;
-    }
-
-    void transmitFrame()
-    {
-        transmitStartRZ();
-        transmitFloatRZ(_data.temp_data);
-        transmitStopRZ();
     }
 };
 

@@ -90,13 +90,6 @@ class ServerCallbacks : public BLEServerCallbacks
 // main class for handling BLE
 template <typename _UUID_Generator_Type> class Bluetooth
 {
-  private:
-    BLEServer *pServer;
-    BLEService *pService;
-    BLECharacteristic *pCharacteristic;
-    BLEAdvertising *pAdvertising;
-    _UUID_Generator_Type _uuid_gen_struct;
-
   public:
     CharacteristicCallbacks *callback_class;
 
@@ -144,6 +137,13 @@ template <typename _UUID_Generator_Type> class Bluetooth
     {
         return clientConnected;
     }
+
+  private:
+    BLEServer *pServer;
+    BLEService *pService;
+    BLECharacteristic *pCharacteristic;
+    BLEAdvertising *pAdvertising;
+    _UUID_Generator_Type _uuid_gen_struct;
 };
 
 #endif /* A3A894A8_7557_423C_AF30_DF2AD1257EE6 */
